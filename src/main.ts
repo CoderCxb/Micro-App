@@ -10,19 +10,23 @@ const whitelist: string[] = [
 registerMicroApps([
   {
     name: 'reactApp',
-    // entry: '//localhost:3000/',
-    entry: '//10.0.224.92:3000',
+    entry: '//localhost:3000',
     container: '#micro-app-container',
     activeRule: ['/react-app'],
   }
 ]);
 
 start({
+  // 针对动态加载, 如动态插入script、JSONP,返回true
+  // 动态加载优先走这
   excludeAssetFilter: url => {
     return url.indexOf('api.map.baidu.com') !== -1
   },
+
+  // 针对HTML中直接加载资源, 如script、link
+  // 动态加载也会经过fetch, 但是可能会导致循环引用
   // @ts-ignore
-  async fetch (url: string, ...args: any[]):  Promise<Response> {
+  async fetch (url: string, ...args: any[]):  Promise<any> {
     console.log(url, args);
     if (whitelist.some(item => (url as string).includes(item))) {
       // do something
@@ -38,10 +42,11 @@ start({
         el.href = url;
       }
       document.body.appendChild(el)
-      return window.fetch(url, {
-        ...args,
-        mode: 'no-cors'
-      })
+      return {
+        async text() {
+          return '';
+        },
+      };
     }
     return window.fetch(url, ...args)
   }
